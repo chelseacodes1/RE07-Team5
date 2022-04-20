@@ -170,7 +170,6 @@ def about():
     return page_view("about", garble=about_garble())
 
 
-
 # Returns a random string each time
 def about_garble():
     '''
