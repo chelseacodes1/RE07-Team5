@@ -286,16 +286,19 @@ def chat_handle_websocket():
                 message_received = model.get_message(sender, username)
                 if message_received:
                     message_received_header = "2," + sender + ","
-                    # recv_pk = model.give_public_key(sender)
                     recv_sym = message_received[2]
                     recv_msg = message_received[3]
                     recv_iv = message_received[4]
                     recv_sig = message_received[5]
-                    # ws.send(message_received_header + ",pk," + recv_pk[0])
                     ws.send(message_received_header + "sym," + recv_sym)
                     ws.send(message_received_header + "msg," + recv_msg)
                     ws.send(message_received_header + "iv," + recv_iv)
                     ws.send(message_received_header + "sig," + recv_sig)
+            
+            if message_list[1] == "message received":
+                sender = message_list[2]
+                ws.send("1,message deleted")
+                model.delete_message(sender, username)
 
             if message_list[1] == "send":
                 receiver = message_list[2]
