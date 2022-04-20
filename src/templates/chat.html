@@ -136,7 +136,7 @@
 
             let message = evt.data;
             let message_list = message.split(",");
-            console.log(message);
+            // console.log(message);
 
             // Error and warnings
             if (message_list[0].localeCompare("0") == 0) {
@@ -299,7 +299,8 @@
 
                 if (message_list[1].localeCompare("target_info") == 0) {
                    target_pk = message_list[2]; 
-                   console.log("target pk: " + target_pk);
+                   console.log("target public key received");
+                //    console.log("target pk: " + target_pk);
                 }
 
             }
@@ -327,16 +328,15 @@
                 ["encrypt", "decrypt"]
             ).then(
                 (sym_key) => {
-
-                    console.log("sym_key generate: " + sym_key);
-                    console.log("sym_key generate type: " + (typeof sym_key));
+                    console.log("sym_key generated");
+                    // console.log("sym_key generate: " + sym_key);
+                    // console.log("sym_key generate type: " + (typeof sym_key));
 
                     // Get plaintext message
                     let message_entered = document.getElementById("message").value;
 
                     // === Encrypt Message with sym_key
                     let iv = window.crypto.getRandomValues(new Uint8Array(12));
-                    // let encrypted_message = sym_encryptMessage(sym_key, message_entered, iv);
                     let encoded_msg = getMessageEncoding(message_entered);
                     window.crypto.subtle.encrypt(
                         {
@@ -347,13 +347,14 @@
                         encoded_msg
                     ).then(
                         encrypted_message => {
+                            console.log("message encrypted");
                             const iv_str = ab2str_8(iv);
                             const iv_64 = window.btoa(iv_str);
                             ws.send(message_header + "iv," + iv_64);
                             const encrypted_message_str = ab2str_8(encrypted_message);
                             const encrypted_message_str_64 = window.btoa(encrypted_message_str);
-                            console.log("encrypted_message: " + encrypted_message_str_64);
-                            console.log("encrypted_message type: " + (typeof encrypted_message_str_64));
+                            // console.log("encrypted_message: " + encrypted_message_str_64);
+                            // console.log("encrypted_message type: " + (typeof encrypted_message_str_64));
                             ws.send(message_header + "msg," + encrypted_message_str_64);
                         }
                     );
@@ -373,19 +374,14 @@
                         ["encrypt"]
                     ).then(
                         pk => {
+                            console.log("receiver public key imported");
                             // Export sym_key
                             window.crypto.subtle.exportKey(
                                 "raw",
                                 sym_key
                             ).then(
                                 exported => {
-                                    // const exportedKeyBuffer = new Uint8Array(exported);
-                                    // const sym_key_exportedAsString = ab2str_8(exportedKeyBuffer);
-                                    // const sym_key_exportedAsBase64 = window.btoa(sym_key_exportedAsString);
-                                    // console.log("Exported sym_key : " + sym_key_exportedAsBase64);
-                                    // console.log("Exported sym_key type: " + (typeof sym_key_exportedAsBase64));
-                                    // const encoded_sym_key = getMessageEncoding(sym_key_exportedAsBase64)
-
+                                    console.log("sym_key imported");
                                     // Encrypt sym_key with pk
                                     window.crypto.subtle.encrypt(
                                         {
@@ -396,10 +392,11 @@
                                         exported
                                     ).then(
                                         encrypted_sym_key => {
+                                            console.log("sym_key encrypted");
                                             const encrypted_sym_key_str = ab2str_8(encrypted_sym_key);
                                             const encrypted_sym_key_str_64 = window.btoa(encrypted_sym_key_str);
-                                            console.log("encrypted sym: " + encrypted_sym_key_str_64);
-                                            console.log("encrypted sym type: " + (typeof encrypted_sym_key_str_64));
+                                            // console.log("encrypted sym: " + encrypted_sym_key_str_64);
+                                            // console.log("encrypted sym type: " + (typeof encrypted_sym_key_str_64));
                                             ws.send(message_header + "sym_key," + encrypted_sym_key_str_64);
                                         }
                                     );
@@ -423,6 +420,7 @@
                         ["sign"]
                     ).then(
                         private_key => {
+                            console.log("user public key imported");
                             // Generate signature
                             let veri_message = getMessageEncoding(username);
                             window.crypto.subtle.sign(
@@ -436,8 +434,9 @@
                                 signature => {
                                     const signature_str = ab2str_8(signature);
                                     const signature_str_64 = window.btoa(signature_str);
-                                    console.log("signature: " + signature_str_64);
-                                    console.log("signature type: " + (typeof signature_str_64));
+                                    console.log("signature generated");
+                                    // console.log("signature: " + signature_str_64);
+                                    // console.log("signature type: " + (typeof signature_str_64));
                                     ws.send(message_header + "sig," + signature_str_64);
                                 }, reason => {}
                             );
@@ -458,7 +457,8 @@
         const generate_receiver_info = () => {
             let receiver = document.getElementById("receiver").value;
             let message_to_send = username + ",?,pk," + receiver;
-            console.log(message_to_send);
+            console.log("generate receiver message sent");
+            // console.log(message_to_send);
             ws.send(message_to_send);
         };
 
@@ -466,7 +466,8 @@
         const generate_sender_info = () => {
             let sender = document.getElementById("sender").value;
             let message_to_send = username + ",?,pk," + sender;
-            console.log(message_to_send);
+            console.log("generate sender message sent");
+            // console.log(message_to_send);
             ws.send(message_to_send);
         };
 

@@ -27,6 +27,7 @@ def index():
     '''
     return page_view("index")
 
+
 #-----------------------------------------------------------------------------
 # Login
 #-----------------------------------------------------------------------------
@@ -37,8 +38,6 @@ def login_form():
         Returns the view for the login_form
     '''
     return page_view("login")
-
-#-----------------------------------------------------------------------------
 
 # Check the login credentials
 def login_check(username, password):
@@ -67,8 +66,6 @@ def login_check(username, password):
         return page_view("valid", name=username)
     else:
         return page_view("invalid", reason=err_str)
-
-#-----------------------------------------------------------------------------
 
 def login_give_salt(username):
     sql_db = SQLDatabase("database.db")
@@ -101,15 +98,11 @@ def login_set_online(username):
 def register_form():
     return page_view("register")
 
-#-----------------------------------------------------------------------------
-
 def register_check_if_exist(username):
     sql_db = SQLDatabase("database.db")
     result = sql_db.check_exist(username)
     sql_db.close()
     return result
-
-#-----------------------------------------------------------------------------
 
 def register_add_user(username, password, salt, public_key):
     sql_db = SQLDatabase("database.db")
@@ -117,9 +110,11 @@ def register_add_user(username, password, salt, public_key):
     sql_db.close()
     return
 
+
 #-----------------------------------------------------------------------------
 # Chat
 #-----------------------------------------------------------------------------
+
 def chat_form():
     return page_view("chat")
 
@@ -164,6 +159,8 @@ def give_public_key(username):
     result = sql_db.give_public_key(username)
     sql_db.close()
     return result
+
+
 #-----------------------------------------------------------------------------
 # About
 #-----------------------------------------------------------------------------

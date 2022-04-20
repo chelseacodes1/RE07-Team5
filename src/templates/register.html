@@ -89,9 +89,10 @@ Register with a new username
                             keyPair.privateKey
                         ).then(
                             exported => {
+                                console.log("private key exported");
                                 const exportedAsString = ab2str_8(exported);
                                 const exportedAsBase64 = window.btoa(exportedAsString);
-                                console.log("exported private key:" + exportedAsBase64);
+                                // console.log("exported private key:" + exportedAsBase64);
                                 localStorage.setItem(document.getElementById("username").value, exportedAsBase64);
                             }
                         );
@@ -102,9 +103,10 @@ Register with a new username
                             keyPair.publicKey
                         ).then(
                             exported => {
+                                console.log("public key exported");
                                 const exportedAsString = ab2str_8(exported);
                                 const exportedAsBase64 = window.btoa(exportedAsString);
-                                console.log("exported public key:" + exportedAsBase64);
+                                // console.log("exported public key:" + exportedAsBase64);
                                 ws.send("public_key," + exportedAsBase64);
                             }
                         );
@@ -120,6 +122,7 @@ Register with a new username
 
             // Generata salt
             let salt = generate_salt();
+            console.log("salt generated");
             // console.log("salt:" + salt);
 
             ws.send("salt," + salt);
@@ -129,7 +132,8 @@ Register with a new username
             password_1 += salt;
             digestMessage(password_1).then(
                 value => {
-                    console.log(value);
+                    console.log("password_1 hashed");
+                    // console.log(value);
                     ws.send("password_1," + value);
                 }, reason => {}
             );
@@ -138,7 +142,8 @@ Register with a new username
             password_2 += salt;
             digestMessage(password_2).then(
                 value => {
-                    console.log(value);
+                    console.log("password_2 hashed");
+                    // console.log(value);
                     ws.send("password_2," + value);
                 }, reason => {}
             );
@@ -146,11 +151,11 @@ Register with a new username
             return;
         };
 
-        const clear_item = () => {
-            localStorage.clear();
-        };
+        // const clear_item = () => {
+        //     localStorage.clear();
+        // };
 
     </script>
 </p>
 </center>
-<button id="reset" onclick="clear_item()" type="button">Clear Item</button>
+<!-- <button id="reset" onclick="clear_item()" type="button">Clear Item</button> -->

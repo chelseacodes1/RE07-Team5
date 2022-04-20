@@ -65,6 +65,7 @@ def serve_js(js):
     '''
     return static_file(js, root='static/js/')
 
+
 #-----------------------------------------------------------------------------
 # Pages
 #-----------------------------------------------------------------------------
@@ -74,6 +75,7 @@ def serve_js(js):
 @app.get('/home')
 def get_index():
     return model.index()
+
 
 #-----------------------------------------------------------------------------
 # Login
@@ -93,9 +95,6 @@ def login_handle_websocket():
     if not ws:
         abort(400, 'Expected WebSocket request.')
     
-    # Helper var
-    user_exist = False
-
     # var to pass
     username = ""
     password = ""
@@ -145,6 +144,16 @@ def login_handle_websocket():
             break
     
     return
+
+#-----------------------------------------------------------------------------
+
+@app.get('/chat/<username:re:.+>')
+def get_login_controller(username):
+    if_online = model.check_if_online(username)
+    if if_online:
+        return model.chat_form()
+    else:
+        return model.chat_form_invalid() 
 
 
 #-----------------------------------------------------------------------------
@@ -243,14 +252,6 @@ def get_register_controller():
 # Chat
 #-----------------------------------------------------------------------------
 
-@app.get('/chat/<username:re:.+>')
-def get_login_controller(username):
-    if_online = model.check_if_online(username)
-    if if_online:
-        return model.chat_form()
-    else:
-        return model.chat_form_invalid() 
-
 # @app.route('/chat/<username:re:.+>/websocket')
 @app.route('/chat/websocket')
 def chat_handle_websocket():
@@ -328,10 +329,6 @@ def chat_handle_websocket():
 
         except WebSocketError:
             break 
-
-
-#-----------------------------------------------------------------------------
-#-----------------------------------------------------------------------------
 
 
 #-----------------------------------------------------------------------------
