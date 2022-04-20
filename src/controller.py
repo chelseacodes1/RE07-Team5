@@ -8,7 +8,6 @@ from email import message
 from re import S, U
 from string import ascii_letters
 from bottle import route, get, post, error, request, static_file, Bottle, abort
-from django.dispatch import receiver
 from geventwebsocket import WebSocketError
 import config
 from sql import SQLDatabase
@@ -152,8 +151,9 @@ def get_login_controller(username):
     if_online = model.check_if_online(username)
     if if_online:
         return model.chat_form()
-    else:
-        return model.chat_form_invalid() 
+    return
+    # else:
+    #     return model.chat_form_invalid() 
 
 
 #-----------------------------------------------------------------------------

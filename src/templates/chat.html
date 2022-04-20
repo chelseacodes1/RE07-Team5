@@ -35,9 +35,9 @@
         // ########################
         // Generate symmatric key
         // From https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/
-        function ab2str_16(buf) {
-            return String.fromCharCode.apply(null, new Uint16Array(buf));
-        }
+        // function ab2str_16(buf) {
+        //     return String.fromCharCode.apply(null, new Uint16Array(buf));
+        // }
 
         function ab2str_8(buf) {
             return String.fromCharCode.apply(null, new Uint8Array(buf));
@@ -52,14 +52,14 @@
             return buf;
         }
 
-        function str2ab_16(str) {
-            const buf = new ArrayBuffer(str.length*2);
-            const bufView = new Uint16Array(buf);
-            for (let i = 0, strLen = str.length; i < strLen; i++) {
-            bufView[i] = str.charCodeAt(i);
-            }
-            return buf;
-        }
+        // function str2ab_16(str) {
+        //     const buf = new ArrayBuffer(str.length*2);
+        //     const bufView = new Uint16Array(buf);
+        //     for (let i = 0, strLen = str.length; i < strLen; i++) {
+        //     bufView[i] = str.charCodeAt(i);
+        //     }
+        //     return buf;
+        // }
 
         function getMessageEncoding(message) {
             let enc = new TextEncoder();
@@ -71,48 +71,10 @@
             return dec.decode(message);
         }
 
-        function sym_decryptMessage(key, iv, ciphertext) {
-            return window.crypto.subtle.decrypt(
-                {
-                name: "AES-GCM",
-                iv: iv
-                },
-                key,
-                ciphertext
-            );
-        }
-
-        function asym_decryptMessage(privateKey, ciphertext) {
-            return window.crypto.subtle.decrypt(
-                {
-                name: "RSA-OAEP"
-                },
-                privateKey,
-                ciphertext
-            );
-        }
-
-        function verify_signature(public_key, signature, message) {
-            let encoded = getMessageEncoding(message);
-            window.crypto.subtle.verify(
-                {
-                name: "RSA-PSS",
-                saltLength: 32,
-                },
-                publicKey,
-                signature,
-                encoded
-            ).then(
-                value => {
-                    return value;
-                }, reason => {}
-            );
-        }
 
         // ############
         // ### MAIN ###
         // ############
-
 
         const ws = new WebSocket("wss://localhost:8081/chat/websocket");
 
@@ -174,8 +136,6 @@
                         return;
                     }
 
-                    document.getElementById("show").innerHTML = "";
-
                     // Process target public key and user private key
                     const pk_binaryDerString = window.atob(target_pk);
                     const pk_binaryDer = str2ab_8(pk_binaryDerString);
@@ -195,7 +155,7 @@
                     const msg_binaryDer = str2ab_8(msg_binaryDerString);
 
                     // Get veri_message
-                    const veri_message = getMessageEncoding(username);
+                    const veri_message = getMessageEncoding(sender);
                     
                     // === Verify Signature
                     // Import sender public key
@@ -210,6 +170,7 @@
                         ["verify"]
                     ).then(
                         public_key => {
+                            // Verify the signatue
                             console.log("sender public key loaded");
                             window.crypto.subtle.verify(
                                 {
@@ -226,6 +187,10 @@
                                     } else {
                                         console.log("signature verification failed");
                                         alert("WARNING: Signature verification failed.");
+                                        recv_iv = "";
+                                        recv_msg = "";
+                                        recv_sig = "";
+                                        recv_sym = "";
                                     }
                                 }, reason => {}
                             );
@@ -282,7 +247,10 @@
                                                     let message_str = getMessageDecoding(message_arr);
                                                     document.getElementById("show").innerHTML = message_str;
                                                     ws.send(username + ",message received," + sender);
-                                                    return;
+                                                    recv_iv = "";
+                                                    recv_msg = "";
+                                                    recv_sig = "";
+                                                    recv_sym = "";
                                                 }, reason => {}
                                             );
                                         }
@@ -336,7 +304,7 @@
                     let message_entered = document.getElementById("message").value;
 
                     // === Encrypt Message with sym_key
-                    let iv = window.crypto.getRandomValues(new Uint8Array(12));
+                    let iv = window.crypto.getRandomValues(new Uint8Array(12)); // generate iv which will be used for encryping and decrypting with ACC-GCM
                     let encoded_msg = getMessageEncoding(message_entered);
                     window.crypto.subtle.encrypt(
                         {
@@ -347,6 +315,7 @@
                         encoded_msg
                     ).then(
                         encrypted_message => {
+                            // Message encrypted
                             console.log("message encrypted");
                             const iv_str = ab2str_8(iv);
                             const iv_64 = window.btoa(iv_str);
@@ -382,13 +351,12 @@
                             ).then(
                                 exported => {
                                     console.log("sym_key imported");
-                                    // Encrypt sym_key with pk
+                                    // Encrypt sym_key with the receiver's public key
                                     window.crypto.subtle.encrypt(
                                         {
                                             name: "RSA-OAEP"
                                         },
                                         pk,
-                                        // encoded_sym_key
                                         exported
                                     ).then(
                                         encrypted_sym_key => {
@@ -420,7 +388,7 @@
                         ["sign"]
                     ).then(
                         private_key => {
-                            console.log("user public key imported");
+                            console.log("user private key imported");
                             // Generate signature
                             let veri_message = getMessageEncoding(username);
                             window.crypto.subtle.sign(
@@ -455,6 +423,7 @@
         
 
         const generate_receiver_info = () => {
+            target_pk = "";
             let receiver = document.getElementById("receiver").value;
             let message_to_send = username + ",?,pk," + receiver;
             console.log("generate receiver message sent");
@@ -464,6 +433,7 @@
 
 
         const generate_sender_info = () => {
+            target_pk = "";
             let sender = document.getElementById("sender").value;
             let message_to_send = username + ",?,pk," + sender;
             console.log("generate sender message sent");

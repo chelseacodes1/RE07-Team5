@@ -118,8 +118,8 @@ def register_add_user(username, password, salt, public_key):
 def chat_form():
     return page_view("chat")
 
-def chat_form_invalid():
-    return page_view("chat_invalid")
+# def chat_form_invalid():
+#     return page_view("chat_invalid")
 
 def check_if_online(username):
     sql_db = SQLDatabase("database.db")
