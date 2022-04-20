@@ -1,0 +1,108 @@
+
+Login with a username and password
+</p>
+
+<p>
+    <form action="/login" method="post">
+        <label for="username">Username:</label>
+        <input id="username" name="username" type="text" />
+    </br>
+    </br>
+        <label for="password">Password:</label>
+        <input id="password" name="password" type="password" />
+    </br>
+    </br>
+        <button id="login" type="button" onclick="login_main()">Login</button>
+        <button id="register" type="button" onclick="parent.location='../register'">Register</button>
+    </form>
+
+    <script>
+        // ########################
+        // ### Helper Functions ###
+        // ########################
+
+        // Hashing function
+        // From https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest#examples
+        async function digestMessage(message) {
+            const msgUint8 = new TextEncoder().encode(message);                           // encode as (utf-8) Uint8Array
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);           // hash the message
+            const hashArray = Array.from(new Uint8Array(hashBuffer));                     // convert buffer to byte array
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join(''); // convert bytes to hex string
+            return hashHex;
+        }
+
+        function set_online(username) {
+            let item_value = localStorage.getItem(username);
+            let item_value_list = item_value.split(",");
+            for (let i = 0; i < item_value_list.length; i++) {
+                if (item_value_list[i].localeCompare("state") == 0) {
+                    item_value_list[i+1] = "on";
+                }
+            }
+            item_value = "";
+            for (let i = 0; i < item_value_list.length; i++) {
+                item_value += item_value_list[i] + ",";
+            }
+            item_value = item_value.slice(0, -1); // remove last ","
+            localStorage.setItem(username, item_value);
+            return;
+        }
+
+        // ####################
+        // ### Main Process ###
+        // #################### 
+
+        const ws = new WebSocket("wss://localhost:8081/login/websocket");
+
+        ws.onmessage = function(evt) {
+            let message = evt.data;
+            let message_list = message.split(",");
+            
+            // Check if the message received is an error message
+            if (message_list[0].localeCompare("0") == 0) {
+                alert(message_list[1]);
+
+            // Not error message
+            } else {
+                let real_message = message_list[1];
+                console.log("Server: " + real_message);
+
+                // Ask for salt
+                if (real_message.localeCompare("user exists") == 0) {
+                    console.log("Client: ask for salt");
+                    ws.send("?,salt");
+                }
+                
+                // Hash and send the hashed password
+                if (real_message.localeCompare("salt") == 0) {
+                    let salt = message_list[2];
+                    console.log("Client: salt received is " + salt)
+                    let password = document.getElementById("password").value + salt;
+                    digestMessage(password).then(
+                        value => {
+                            ws.send("password," + value);
+                            console.log(value);
+                        }, reason => {}
+                    );
+                }
+                
+                // Set online
+                if (real_message.localeCompare("valid password") == 0) {
+                    console.log("Client: valid password")
+                    let url = '../chat/' + document.getElementById("username").value;
+                    window.location.href = url;
+                } 
+            }
+        };
+
+        // Send username, indicating starting logining
+        const login_main = () => {
+            ws.send("username," + document.getElementById("username").value);
+            return;
+        };
+
+    </script>
+
+</p>
+</center>
+

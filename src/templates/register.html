@@ -1,0 +1,156 @@
+
+Register with a new username
+</p>
+
+<p>
+    <form>
+        Username: <input id="username" name="username" type="text" />
+        </br>
+        </br>
+        Password: <input id="password_1" name="password_1" type="password" />
+        </br>
+        </br>
+        Re-enter password: <input id="password_2" name="password_2" type="password"/>
+        </br>
+        </br>
+        <button id="register" onclick="register_main()" type="button">Register</button>
+    </form>
+    <p id="show"></p>
+
+    <script type="text/javascript">
+        // ########################
+        // ### Helper Functions ###
+        // ########################
+        function ab2str_8(buf) {
+            return String.fromCharCode.apply(null, new Uint8Array(buf));
+        }
+
+        function str2ab_8(str) {
+            const buf = new ArrayBuffer(str.length);
+            const bufView = new Uint8Array(buf);
+            for (let i = 0, strLen = str.length; i < strLen; i++) {
+                bufView[i] = str.charCodeAt(i);
+            }
+            return buf;
+        }
+
+        function generate_salt() {
+            let salt = "";
+            let table = "0123456789qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM";
+            for (let i = 0; i < 16; i++) {
+                let index = Math.floor(Math.random() * table.length);
+                salt += table[index];
+            }
+            return salt;
+        }
+
+        // Hashing function
+        // From https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest#examples
+        async function digestMessage(message) {
+            const msgUint8 = new TextEncoder().encode(message);                           // encode as (utf-8) Uint8Array
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);           // hash the message
+            const hashArray = Array.from(new Uint8Array(hashBuffer));                     // convert buffer to byte array
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join(''); // convert bytes to hex string
+            return hashHex;
+        }
+
+        // ####################
+        // ### Main Process ###
+        // ####################
+        const ws = new WebSocket("wss://localhost:8081/register/websocket");
+
+        // Message from the server
+        ws.onmessage = function(evt) {
+            let message = evt.data;
+            let is_positive = message.localeCompare("Positive");
+
+            if (is_positive != 0) {
+                alert(message);
+
+            } else {
+
+                // Generate key pair
+                window.crypto.subtle.generateKey(
+                    {
+                        name: "RSA-OAEP",
+                        modulusLength: 4096,
+                        publicExponent: new Uint8Array([1, 0, 1]),
+                        hash: "SHA-256"
+                    },
+                    true,
+                    ["encrypt", "decrypt"]
+                ).then(
+                    keyPair => {
+                        console.log("generated key pairs");
+
+                        // Save private key
+                        window.crypto.subtle.exportKey(
+                            "pkcs8",
+                            keyPair.privateKey
+                        ).then(
+                            exported => {
+                                const exportedAsString = ab2str_8(exported);
+                                const exportedAsBase64 = window.btoa(exportedAsString);
+                                console.log("exported private key:" + exportedAsBase64);
+                                localStorage.setItem(document.getElementById("username").value, exportedAsBase64);
+                            }
+                        );
+
+                        // Send public key
+                        window.crypto.subtle.exportKey(
+                            "spki",
+                            keyPair.publicKey
+                        ).then(
+                            exported => {
+                                const exportedAsString = ab2str_8(exported);
+                                const exportedAsBase64 = window.btoa(exportedAsString);
+                                console.log("exported public key:" + exportedAsBase64);
+                                ws.send("public_key," + exportedAsBase64);
+                            }
+                        );
+                    }
+                );
+            }
+        }
+
+        const register_main = () => {
+            
+            // Send username to the server
+            ws.send("username," + document.getElementById("username").value);
+
+            // Generata salt
+            let salt = generate_salt();
+            // console.log("salt:" + salt);
+
+            ws.send("salt," + salt);
+
+            // Hash passwords and then send to the server
+            let password_1 = document.getElementById("password_1").value;
+            password_1 += salt;
+            digestMessage(password_1).then(
+                value => {
+                    console.log(value);
+                    ws.send("password_1," + value);
+                }, reason => {}
+            );
+
+            let password_2 = document.getElementById("password_2").value;
+            password_2 += salt;
+            digestMessage(password_2).then(
+                value => {
+                    console.log(value);
+                    ws.send("password_2," + value);
+                }, reason => {}
+            );
+
+            return;
+        };
+
+        const clear_item = () => {
+            localStorage.clear();
+        };
+
+    </script>
+</p>
+</center>
+<button id="reset" onclick="clear_item()" type="button">Clear Item</button>

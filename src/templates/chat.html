@@ -1,0 +1,438 @@
+    Welcome
+</p>
+<p>
+    <label for="receiver">Send to: </label>
+    <input id="receiver">
+    <button id="receiver_info" type="button" onclick="generate_receiver_info()">Generate</button>
+<br><br>
+    <label for="message">Message: </label><br>
+    <textarea id="message" rows="6" cols="30" wrap="soft"></textarea>
+<br><br>
+    <button id="send_message" onclick="send_message()">Send</button>
+<br><br><br><br>
+    <label for="sender">Receive from:</label>
+    <input id="sender">
+    <!-- <button id="sender_info" type="button">Generate</button> -->
+    <button id="sender_info" type="button" onclick="generate_sender_info()">Generate</button>
+<br><br>
+    <button id="receive_message" onclick="receive_message()">Receive</button>
+<br><br><br>
+<p id="show"></p>
+
+    <script>
+        // ########################
+        // ### GLOBAL VARIABLES ###
+        // ########################
+        let url = window.location.href;
+        let url_list = url.split("/")
+        let username = url_list[url_list.length-1];
+        let user_private_key_str = localStorage.getItem(username);
+
+        let target_pk = "";
+
+        // ########################
+        // ### HELPER FUNCTIONS ###
+        // ########################
+        // Generate symmatric key
+        // From https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/
+        function ab2str_16(buf) {
+            return String.fromCharCode.apply(null, new Uint16Array(buf));
+        }
+
+        function ab2str_8(buf) {
+            return String.fromCharCode.apply(null, new Uint8Array(buf));
+        }
+
+        function str2ab_8(str) {
+            const buf = new ArrayBuffer(str.length);
+            const bufView = new Uint8Array(buf);
+            for (let i = 0, strLen = str.length; i < strLen; i++) {
+            bufView[i] = str.charCodeAt(i);
+            }
+            return buf;
+        }
+
+        function str2ab_16(str) {
+            const buf = new ArrayBuffer(str.length*2);
+            const bufView = new Uint16Array(buf);
+            for (let i = 0, strLen = str.length; i < strLen; i++) {
+            bufView[i] = str.charCodeAt(i);
+            }
+            return buf;
+        }
+
+        function getMessageEncoding(message) {
+            let enc = new TextEncoder();
+            return enc.encode(message);
+        }
+
+        function getMessageDecoding(message) {
+            let dec = new TextDecoder();
+            return dec.decode(message);
+        }
+
+        function sym_decryptMessage(key, iv, ciphertext) {
+            return window.crypto.subtle.decrypt(
+                {
+                name: "AES-GCM",
+                iv: iv
+                },
+                key,
+                ciphertext
+            );
+        }
+
+        function asym_decryptMessage(privateKey, ciphertext) {
+            return window.crypto.subtle.decrypt(
+                {
+                name: "RSA-OAEP"
+                },
+                privateKey,
+                ciphertext
+            );
+        }
+
+        function verify_signature(public_key, signature, message) {
+            let encoded = getMessageEncoding(message);
+            window.crypto.subtle.verify(
+                {
+                name: "RSA-PSS",
+                saltLength: 32,
+                },
+                publicKey,
+                signature,
+                encoded
+            ).then(
+                value => {
+                    return value;
+                }, reason => {}
+            );
+        }
+
+        // ############
+        // ### MAIN ###
+        // ############
+
+
+        const ws = new WebSocket("wss://localhost:8081/chat/websocket");
+
+        ws.onopen = function() {
+            console.log("WebSocket established.");
+        };
+
+        ws.onclose = function() {
+            console.log("WebSocket closed");
+        };
+
+        // =================
+        // === Messaging ===
+        // =================
+        let recv_sym = "";
+        let recv_msg = "";
+        let recv_iv = "";
+        let recv_sig = "";
+
+        ws.onmessage = function(evt) {
+
+            let message = evt.data;
+            let message_list = message.split(",");
+            console.log(message);
+
+            // Error and warnings
+            if (message_list[0].localeCompare("0") == 0) {
+                alert(message_list[1]);
+            
+            // Receiveing message
+            } else if (message_list[0].localeCompare("2") == 0) {
+                let sender = message_list[1];
+                let order = message_list[2];
+                let value = "";
+                for (let i = 3; i < message_list.length; i++) {
+                    value += message_list[i];
+                }
+
+                if (order.localeCompare("sig") == 0) {
+                    recv_sig = value;
+                } else if (order.localeCompare("sym") == 0) {
+                    recv_sym = value;
+                } else if (order.localeCompare("iv") == 0) {
+                    recv_iv = value;
+                } else if (order.localeCompare("msg") == 0) {
+                    recv_msg = value;
+                }
+
+                if (
+                    (recv_sig.localeCompare("") != 0) &&
+                    (recv_sym.localeCompare("") != 0) &&
+                    (recv_iv.localeCompare("") != 0) &&
+                    (recv_msg.localeCompare("") != 0)
+                ) {
+
+                    // Check if receiver unformation has been generated
+                    if (target_pk.localeCompare("") == 0) {
+                        alert("Please generate client first.");
+                        return;
+                    }
+
+                    // Process target public key and user private key
+                    const pk_binaryDerString = window.atob(target_pk);
+                    const pk_binaryDer = str2ab_8(pk_binaryDerString);
+                    const user_private_key_str = localStorage.getItem(username);
+                    // console.log("private key: " + user_private_key_str);
+                    const user_private_key_binaryDerString = window.atob(user_private_key_str);
+                    const user_private_key_binaryDer = str2ab_8(user_private_key_binaryDerString);
+
+                    // Convert into arrayBuffer
+                    const sig_binaryDerString = window.atob(recv_sig);
+                    const sig_binaryDer = str2ab_8(sig_binaryDerString);
+                    const sym_binaryDerString = window.atob(recv_sym);
+                    const sym_binaryDer = str2ab_8(sym_binaryDerString);
+                    const iv_binaryDerString = window.atob(recv_iv);
+                    const iv_binaryDer = str2ab_8(iv_binaryDerString);
+                    const msg_binaryDerString = window.atob(recv_msg);
+                    const msg_binaryDer = str2ab_8(msg_binaryDerString);
+
+                    // Get veri_message
+                    const veri_message = getMessageEncoding(username);
+                    
+                    // === Verify Signature
+                    // === Decrypt Message
+                    // Import user private key
+                    let user_private_key = null;
+                    window.crypto.subtle.importKey(
+                        "pkcs8",
+                        user_private_key_binaryDer,
+                        {
+                            name: "RSA-PSS",
+                            hash: "SHA-256",
+                        },
+                        true,
+                        ["sign"]
+                        // ["decrypt"]
+                        // ["sign", "decrypt", "encrypt"] 
+                    ).then(
+                        private_key => {
+                            console.log("private key imported");
+                            // Decrypt sym_key
+                            // window.crypto.subtle.decrypt(
+                            //     {
+                            //         name: "RSA-OAEP"
+                            //     },
+                            //     private_key,
+                            //     sym_binaryDer
+                            // );
+                            // then(
+                                // sym_key_arr => {
+                                    console.log("sym key decrypted");
+                                    // // Import sym_key
+                                    // window.crypto.importKey(
+                                    //     "raw",
+                                    //     sym_key_arr,
+                                    //     "AES-GCM",
+                                    //     true,
+                                    //     ["encrypt", "decrypt"]
+                                    // ).then(
+                                    //     sym_key => {
+                                            console.log("sym key imported");
+                                    //         // Decrypt message
+                                    //         window.crypto.subtle.decrypt(
+                                    //             {
+                                    //                 name: "AES-GCM",
+                                    //                 iv: iv_binaryDer
+                                    //             },
+                                    //             sym_key,
+                                    //             msg_binaryDer
+                                    //         ).then(
+                                    //             message_arr => {
+                                                    console.log("message decrypted");
+                                    //                 let message_str = getMessageDecoding(message_arr);
+                                                    // document.getElementById("show").innerHTML = "Hello chelsea, this is dahao!";
+                                                    // document.getElementById("show").innerHTML = message_str;
+                                    //             }
+                                    //         );
+                                    //     }
+                                    // );
+                                // }
+                            // );
+                        }
+                    );
+                    // }
+                }
+
+                // document.getElementById("show").innerHTML = plain_msg;
+
+            // Order from the server
+            } else if (message_list[0].localeCompare("1") == 0){
+
+                if (message_list[1].localeCompare("target_info") == 0) {
+                   target_pk = message_list[2]; 
+                   console.log("target pk: " + target_pk);
+                }
+
+            }
+
+        };
+
+        const send_message = () => {
+
+            // Check if receiver unformation has been generated
+            if (target_pk.localeCompare("") == 0) {
+                alert("Please generate client first.");
+                return;
+            }
+            
+            let message_header = username + ",send," + document.getElementById("receiver").value + ",";
+
+            // Generate symmetric key
+            window.crypto.subtle.generateKey(
+                {
+                    name: "AES-GCM",
+                    length: 256
+                },
+                true,
+                ["encrypt", "decrypt"]
+            ).then(
+                (sym_key) => {
+
+                    console.log("sym_key generate: " + sym_key);
+                    console.log("sym_key generate type: " + (typeof sym_key));
+
+                    // Get plaintext message
+                    let message_entered = document.getElementById("message").value;
+
+                    // === Encrypt Message with sym_key
+                    let iv = window.crypto.getRandomValues(new Uint8Array(12));
+                    // let encrypted_message = sym_encryptMessage(sym_key, message_entered, iv);
+                    let encoded_msg = getMessageEncoding(message_entered);
+                    window.crypto.subtle.encrypt(
+                        {
+                            name: "AES-GCM",
+                            iv: iv
+                        },
+                        sym_key,
+                        encoded_msg
+                    ).then(
+                        encrypted_message => {
+                            const iv_str = ab2str_8(iv);
+                            const iv_64 = window.btoa(iv_str);
+                            ws.send(message_header + "iv," + iv_64);
+                            const encrypted_message_str = ab2str_8(encrypted_message);
+                            const encrypted_message_str_64 = window.btoa(encrypted_message_str);
+                            console.log("encrypted_message: " + encrypted_message_str_64);
+                            console.log("encrypted_message type: " + (typeof encrypted_message_str_64));
+                            ws.send(message_header + "msg," + encrypted_message_str_64);
+                        }
+                    );
+
+                    // === Encrypt symmetric key with target_pk
+                    // Import public key
+                    const pk_binaryDerString = window.atob(target_pk);
+                    const pk_binaryDer = str2ab_8(pk_binaryDerString);
+                    window.crypto.subtle.importKey(
+                        "spki",
+                        pk_binaryDer,
+                        {
+                            name: "RSA-OAEP",
+                            hash: "SHA-256"
+                        },
+                        true,
+                        ["encrypt"]
+                    ).then(
+                        pk => {
+                            // Export sym_key
+                            window.crypto.subtle.exportKey(
+                                "raw",
+                                sym_key
+                            ).then(
+                                exported => {
+                                    // const exportedKeyBuffer = new Uint8Array(exported);
+                                    // const sym_key_exportedAsString = ab2str_8(exportedKeyBuffer);
+                                    // const sym_key_exportedAsBase64 = window.btoa(sym_key_exportedAsString);
+                                    // console.log("Exported sym_key : " + sym_key_exportedAsBase64);
+                                    // console.log("Exported sym_key type: " + (typeof sym_key_exportedAsBase64));
+                                    // const encoded_sym_key = getMessageEncoding(sym_key_exportedAsBase64)
+
+                                    // Encrypt sym_key with pk
+                                    window.crypto.subtle.encrypt(
+                                        {
+                                            name: "RSA-OAEP"
+                                        },
+                                        pk,
+                                        // encoded_sym_key
+                                        exported
+                                    ).then(
+                                        encrypted_sym_key => {
+                                            const encrypted_sym_key_str = ab2str_8(encrypted_sym_key);
+                                            const encrypted_sym_key_str_64 = window.btoa(encrypted_sym_key_str);
+                                            console.log("encrypted sym: " + encrypted_sym_key_str_64);
+                                            console.log("encrypted sym type: " + (typeof encrypted_sym_key_str_64));
+                                            ws.send(message_header + "sym_key," + encrypted_sym_key_str_64);
+                                        }
+                                    );
+                                }
+                            );
+                        }
+                    );
+
+                    // === Signature
+                    // Import user private key
+                    const user_private_key_binaryDerString = window.atob(user_private_key_str);
+                    const user_private_key_binaryDer = str2ab_8(user_private_key_binaryDerString);
+                    window.crypto.subtle.importKey(
+                        "pkcs8",
+                        user_private_key_binaryDer,
+                        {
+                            name: "RSA-PSS",
+                            hash: "SHA-256",
+                        },
+                        true,
+                        ["sign"]
+                    ).then(
+                        private_key => {
+                            // Generate signature
+                            let veri_message = getMessageEncoding(username);
+                            window.crypto.subtle.sign(
+                                {
+                                    name: "RSA-PSS",
+                                    saltLength: 32,
+                                },
+                                private_key,
+                                veri_message
+                            ).then(
+                                signature => {
+                                    const signature_str = ab2str_8(signature);
+                                    const signature_str_64 = window.btoa(signature_str);
+                                    console.log("signature: " + signature_str_64);
+                                    console.log("signature type: " + (typeof signature_str_64));
+                                    ws.send(message_header + "sig," + signature_str_64);
+                                }, reason => {}
+                            );
+                        }
+                    );
+                }
+            );
+        };
+        
+        const receive_message = () => {
+            let sender = document.getElementById("sender").value;
+            let message_to_send = username + ",receive," + sender;
+            ws.send(message_to_send);
+        };
+        
+        const generate_receiver_info = () => {
+            let receiver = document.getElementById("receiver").value;
+            let message_to_send = username + ",?,pk," + receiver;
+            console.log(message_to_send);
+            ws.send(message_to_send);
+        };
+
+        const generate_sender_info = () => {
+            let sender = document.getElementById("sender").value;
+            let message_to_send = username + ",?,pk," + sender;
+            console.log(message_to_send);
+            ws.send(message_to_send);
+        };
+
+    </script>
+</p>
+</center>
