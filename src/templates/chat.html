@@ -196,6 +196,8 @@
                     const veri_message = getMessageEncoding(username);
                     
                     // === Verify Signature
+
+
                     // === Decrypt Message
                     // Import user private key
                     let user_private_key = null;
@@ -203,63 +205,58 @@
                         "pkcs8",
                         user_private_key_binaryDer,
                         {
-                            name: "RSA-PSS",
+                            name: "RSA-OAEP",
                             hash: "SHA-256",
                         },
                         true,
-                        ["sign"]
-                        // ["decrypt"]
-                        // ["sign", "decrypt", "encrypt"] 
+                        ["decrypt"]
                     ).then(
                         private_key => {
                             console.log("private key imported");
                             // Decrypt sym_key
-                            // window.crypto.subtle.decrypt(
-                            //     {
-                            //         name: "RSA-OAEP"
-                            //     },
-                            //     private_key,
-                            //     sym_binaryDer
-                            // );
-                            // then(
-                                // sym_key_arr => {
+                            window.crypto.subtle.decrypt(
+                                {
+                                    name: "RSA-OAEP"
+                                },
+                                private_key,
+                                sym_binaryDer
+                            ).then(
+                                sym_key_arr => {
                                     console.log("sym key decrypted");
-                                    // // Import sym_key
-                                    // window.crypto.importKey(
-                                    //     "raw",
-                                    //     sym_key_arr,
-                                    //     "AES-GCM",
-                                    //     true,
-                                    //     ["encrypt", "decrypt"]
-                                    // ).then(
-                                    //     sym_key => {
+                                    // Import sym_key
+                                    window.crypto.subtle.importKey(
+                                        "raw",
+                                        sym_key_arr,
+                                        "AES-GCM",
+                                        true,
+                                        ["encrypt", "decrypt"]
+                                    ).then(
+                                        sym_key => {
                                             console.log("sym key imported");
-                                    //         // Decrypt message
-                                    //         window.crypto.subtle.decrypt(
-                                    //             {
-                                    //                 name: "AES-GCM",
-                                    //                 iv: iv_binaryDer
-                                    //             },
-                                    //             sym_key,
-                                    //             msg_binaryDer
-                                    //         ).then(
-                                    //             message_arr => {
+                                            // Decrypt message
+                                            window.crypto.subtle.decrypt(
+                                                {
+                                                    name: "AES-GCM",
+                                                    iv: iv_binaryDer
+                                                },
+                                                sym_key,
+                                                msg_binaryDer
+                                            ).then(
+                                                message_arr => {
                                                     console.log("message decrypted");
-                                    //                 let message_str = getMessageDecoding(message_arr);
-                                                    // document.getElementById("show").innerHTML = "Hello chelsea, this is dahao!";
-                                                    // document.getElementById("show").innerHTML = message_str;
-                                    //             }
-                                    //         );
-                                    //     }
-                                    // );
-                                // }
-                            // );
+                                                    let message_str = getMessageDecoding(message_arr);
+                                                    document.getElementById("show").innerHTML = message_str;
+                                                    ws.send(username + ",message received," + sender);
+                                                }
+                                            );
+                                        }
+                                    );
+                                }
+                            );
                         }
                     );
-                    // }
                 }
 
-                // document.getElementById("show").innerHTML = plain_msg;
 
             // Order from the server
             } else if (message_list[0].localeCompare("1") == 0){
@@ -272,6 +269,7 @@
             }
 
         };
+
 
         const send_message = () => {
 
@@ -413,18 +411,21 @@
             );
         };
         
+
         const receive_message = () => {
             let sender = document.getElementById("sender").value;
             let message_to_send = username + ",receive," + sender;
             ws.send(message_to_send);
         };
         
+
         const generate_receiver_info = () => {
             let receiver = document.getElementById("receiver").value;
             let message_to_send = username + ",?,pk," + receiver;
             console.log(message_to_send);
             ws.send(message_to_send);
         };
+
 
         const generate_sender_info = () => {
             let sender = document.getElementById("sender").value;
