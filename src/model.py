@@ -39,34 +39,6 @@ def login_form():
     '''
     return page_view("login")
 
-# Check the login credentials
-def login_check(username, password):
-    '''
-        login_check
-        Checks usernames and passwords
-
-        :: username :: The username
-        :: password :: The password
-
-        Returns either a view for valid credentials, or a view for invalid credentials
-    '''
-
-    # By default assume good creds
-    login = True
-    
-    if username != "admin": # Wrong Username
-        err_str = "Incorrect Username"
-        login = False
-    
-    if password != "password": # Wrong password
-        err_str = "Incorrect Password"
-        login = False
-        
-    if login: 
-        return page_view("valid", name=username)
-    else:
-        return page_view("invalid", reason=err_str)
-
 def login_give_salt(username):
     sql_db = SQLDatabase("database.db")
     result = sql_db.give_salt(username)
@@ -95,6 +67,7 @@ def login_set_online(username):
 #-----------------------------------------------------------------------------
 # Register
 #-----------------------------------------------------------------------------
+
 def register_form():
     return page_view("register")
 
@@ -117,6 +90,9 @@ def register_add_user(username, password, salt, public_key):
 
 def chat_form():
     return page_view("chat")
+
+def chat_form_invalid():
+    return page_view("chat_invalid")
 
 def check_if_online(username):
     sql_db = SQLDatabase("database.db")

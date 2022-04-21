@@ -39,6 +39,8 @@ class SQLDatabase():
             admin INTEGER DEFAULT 0
         )""")
 
+        # iv is needed for symmetric encryption; it alse works as the id of a message
+        # the chance that two messages have the same sender, recevier and iv is very small
         self.cur.execute("""CREATE TABLE Messages(
             sender TEXT,
             receiver TEXT,
@@ -197,18 +199,6 @@ class SQLDatabase():
 #-----------------------------------------------------------------------------
 
     def add_message(self, sender, receiver, sk, msg, iv, sig):
-        # Check if there is message saved
-        # sql_cmd = """
-        #         SELECT * FROM Messages
-        #         WHERE sender = '{sender}' and receiver = '{receiver}'
-        #     """
-        # sql_cmd = sql_cmd.format(sender=sender, recevier=receiver)
-        # self.cur.execute(sql_cmd)
-        # self.con.row_factory = sqlite3.Row
-        # msg_row = self.cur.fetchall()
-        # if msg_row:
-        #     pass
-
         sql_cmd = """
                 INSERT INTO Messages
                 VALUES('{sender}', '{receiver}', '{sk}', '{msg}', '{iv}', '{sig}')
@@ -218,6 +208,7 @@ class SQLDatabase():
         self.commit()
         return
     
+    # Return one message with the same sender and receiver when called every time
     def get_message(self, sender, receiver):
         sql_query = """
                 SELECT * FROM Messages

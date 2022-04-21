@@ -143,20 +143,15 @@ def login_handle_websocket():
     
     return
 
-#-----------------------------------------------------------------------------
-
-@app.get('/chat/<username:re:.+>')
-def get_login_controller(username):
-    if_online = model.check_if_online(username)
-    if if_online:
-        return model.chat_form()
-    return
-    # else:
-    #     return model.chat_form_invalid() 
-
 
 #-----------------------------------------------------------------------------
 # Register
+#-----------------------------------------------------------------------------
+
+@app.get('/register')
+def get_register_controller():
+    return model.register_form()
+
 #-----------------------------------------------------------------------------
 
 @app.route('/register/websocket')
@@ -240,18 +235,21 @@ def register_handle_websocket():
         except WebSocketError:
             break
 
-#-----------------------------------------------------------------------------
-
-@app.get('/register')
-def get_register_controller():
-    return model.register_form()
-
 
 #-----------------------------------------------------------------------------
 # Chat
 #-----------------------------------------------------------------------------
 
-# @app.route('/chat/<username:re:.+>/websocket')
+@app.get('/chat/<username:re:.+>')
+def get_login_controller(username):
+    if_online = model.check_if_online(username)
+    if if_online:
+        return model.chat_form()
+    else:
+        return model.chat_form_invalid() 
+
+#-----------------------------------------------------------------------------
+
 @app.route('/chat/websocket')
 def chat_handle_websocket():
     ws = request.environ.get('wsgi.websocket')
