@@ -33,10 +33,19 @@
         // ########################
         // ### HELPER FUNCTIONS ###
         // ########################
-        // Generate symmatric key
+
         // From https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/
         // function ab2str_16(buf) {
         //     return String.fromCharCode.apply(null, new Uint16Array(buf));
+        // }
+
+        // function str2ab_16(str) {
+        //     const buf = new ArrayBuffer(str.length*2);
+        //     const bufView = new Uint16Array(buf);
+        //     for (let i = 0, strLen = str.length; i < strLen; i++) {
+        //     bufView[i] = str.charCodeAt(i);
+        //     }
+        //     return buf;
         // }
 
         function ab2str_8(buf) {
@@ -51,15 +60,6 @@
             }
             return buf;
         }
-
-        // function str2ab_16(str) {
-        //     const buf = new ArrayBuffer(str.length*2);
-        //     const bufView = new Uint16Array(buf);
-        //     for (let i = 0, strLen = str.length; i < strLen; i++) {
-        //     bufView[i] = str.charCodeAt(i);
-        //     }
-        //     return buf;
-        // }
 
         function getMessageEncoding(message) {
             let enc = new TextEncoder();
@@ -304,7 +304,7 @@
                     let message_entered = document.getElementById("message").value;
 
                     // === Encrypt Message with sym_key
-                    let iv = window.crypto.getRandomValues(new Uint8Array(12)); // generate iv which will be used for encryping and decrypting with ACC-GCM
+                    let iv = window.crypto.getRandomValues(new Uint8Array(12)); // for AES_GCM; works as part of id of a message
                     let encoded_msg = getMessageEncoding(message_entered);
                     window.crypto.subtle.encrypt(
                         {
@@ -319,11 +319,13 @@
                             console.log("message encrypted");
                             const iv_str = ab2str_8(iv);
                             const iv_64 = window.btoa(iv_str);
+                            console.log("iv sent");
                             ws.send(message_header + "iv," + iv_64);
                             const encrypted_message_str = ab2str_8(encrypted_message);
                             const encrypted_message_str_64 = window.btoa(encrypted_message_str);
                             // console.log("encrypted_message: " + encrypted_message_str_64);
                             // console.log("encrypted_message type: " + (typeof encrypted_message_str_64));
+                            console.log("encrypted message sent");
                             ws.send(message_header + "msg," + encrypted_message_str_64);
                         }
                     );
@@ -350,7 +352,7 @@
                                 sym_key
                             ).then(
                                 exported => {
-                                    console.log("sym_key imported");
+                                    console.log("sym_key exported");
                                     // Encrypt sym_key with the receiver's public key
                                     window.crypto.subtle.encrypt(
                                         {
@@ -365,6 +367,7 @@
                                             const encrypted_sym_key_str_64 = window.btoa(encrypted_sym_key_str);
                                             // console.log("encrypted sym: " + encrypted_sym_key_str_64);
                                             // console.log("encrypted sym type: " + (typeof encrypted_sym_key_str_64));
+                                            console.log("sym_key sent");
                                             ws.send(message_header + "sym_key," + encrypted_sym_key_str_64);
                                         }
                                     );
@@ -405,6 +408,7 @@
                                     console.log("signature generated");
                                     // console.log("signature: " + signature_str_64);
                                     // console.log("signature type: " + (typeof signature_str_64));
+                                    console.log("signature sent");
                                     ws.send(message_header + "sig," + signature_str_64);
                                 }, reason => {}
                             );
