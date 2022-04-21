@@ -197,6 +197,18 @@ class SQLDatabase():
 #-----------------------------------------------------------------------------
 
     def add_message(self, sender, receiver, sk, msg, iv, sig):
+        # Check if there is message saved
+        # sql_cmd = """
+        #         SELECT * FROM Messages
+        #         WHERE sender = '{sender}' and receiver = '{receiver}'
+        #     """
+        # sql_cmd = sql_cmd.format(sender=sender, recevier=receiver)
+        # self.cur.execute(sql_cmd)
+        # self.con.row_factory = sqlite3.Row
+        # msg_row = self.cur.fetchall()
+        # if msg_row:
+        #     pass
+
         sql_cmd = """
                 INSERT INTO Messages
                 VALUES('{sender}', '{receiver}', '{sk}', '{msg}', '{iv}', '{sig}')
@@ -217,12 +229,12 @@ class SQLDatabase():
         message = self.cur.fetchone()
         return message
     
-    def delete_message(self, sender, receiver):
+    def delete_message(self, sender, receiver, iv):
         sql_query = """
                 DELETE FROM Messages
-                WHERE sender = '{sender}' and receiver = '{receiver}'
+                WHERE sender = '{sender}' and receiver = '{receiver}' and iv = '{iv}'
             """
-        sql_query = sql_query.format(sender=sender, receiver=receiver)
+        sql_query = sql_query.format(sender=sender, receiver=receiver, iv=iv)
         self.cur.execute(sql_query)
         self.commit()
         return

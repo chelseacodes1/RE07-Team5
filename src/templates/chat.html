@@ -246,7 +246,7 @@
                                                     console.log("message decrypted");
                                                     let message_str = getMessageDecoding(message_arr);
                                                     document.getElementById("show").innerHTML = message_str;
-                                                    ws.send(username + ",message received," + sender);
+                                                    ws.send(username + ",message received," + sender + ',' + recv_iv);
                                                     recv_iv = "";
                                                     recv_msg = "";
                                                     recv_sig = "";

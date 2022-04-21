@@ -145,9 +145,9 @@ def get_message(sender, receiver):
     sql_db.close()
     return message
 
-def delete_message(sender, receiver):
+def delete_message(sender, receiver, iv):
     sql_db = SQLDatabase("database.db")
-    sql_db.delete_message(sender, receiver)
+    sql_db.delete_message(sender, receiver, iv)
     sql_db.close()
     return
 

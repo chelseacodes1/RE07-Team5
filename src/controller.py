@@ -1,17 +1,16 @@
-'''
-    This file will handle our typical Bottle requests and responses 
-    You should not have anything beyond basic page loads, handling forms and 
-    maybe some simple program logic
-'''
-
-from email import message
-from re import S, U
-from string import ascii_letters
-from bottle import route, get, post, error, request, static_file, Bottle, abort
+#-----------------------------------------------------------------------------
+# imports
+#-----------------------------------------------------------------------------
+from bottle import request, static_file, abort
 from geventwebsocket import WebSocketError
+
+#-----------------------------------------------------------------------------
+
+# Use the same app as in run.py
 import config
-from sql import SQLDatabase
 app = config.app
+
+#-----------------------------------------------------------------------------
 import model
 
 #-----------------------------------------------------------------------------
@@ -298,17 +297,14 @@ def chat_handle_websocket():
             
             if message_list[1] == "message received":
                 sender = message_list[2]
+                iv = message_list[3]
                 ws.send("1,message deleted")
-                model.delete_message(sender, username)
+                model.delete_message(sender, username, iv)
 
             if message_list[1] == "send":
                 receiver = message_list[2]
                 order = message_list[3]
-
-                # In case "," in message
-                value = ""
-                for i in message_list[4:]:
-                    value += i
+                value = message_list[4]
 
                 if order == "sym_key":
                     send_sym = value
